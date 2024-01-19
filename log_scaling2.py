@@ -38,64 +38,110 @@ if __name__ == "__main__":
     # =======================================================================
     # setup condition parameters
     disp_progress: bool = True
-    disp_info: bool = False
-    phtgm_or_lidar: bool = True
-    opt_clustering: list[str] = [
-        "PHTGM_SHOP",
-        "PHTGM_SNO",
-        "LIDAR_SHOP",
-    ]
-    use_clustering: str = opt_clustering[1]
+    disp_info: bool = True
 
-    # setup PCD file path
-    pcd_folder: str
+    data_type: list[str] = [
+        "snoqualmie-phtgm",
+        "snoqualmie-lidar",
+        "inshop-phtgm",
+        "inshop-lidar",
+    ]
+    which_load: int  # 1,2,3,4 for snoqualmie onsite load number
+    whick_snr: int
+    which_end: str  # 'frt' or 'bck'
+    which_step: int
+    vec2sky: FloatArray3
+    vec2snr: FloatArray3
+    ptg2real_scale: float = 1.0
+    floor_ht: float = 1.5
+    folder_name: str = ""
+    mrun_name: str = ""
+    obj_name: str = ""
+
+    pcd_frt: PointCloud
+    pcd_bck: PointCloud
     logfrt_name: str
     logbck_name: str
-
-    # setup log scaling coordinate parameters
-    vec2sky: FloatArray3
-    vec2sensor: FloatArray3
-    ang_offset: float = np.pi / 6
-    uvw_mesh_scale: float = 0.2
+    logfrt_axes: FloatArray3x3
+    logbck_axes: FloatArray3x3
+    logfrt_ref_plane_axis_pos: float
+    logbck_ref_plane_axis_pos: float
     # frt: the desired pcd tri-axes and translation vector in the global coord
-    logfrt_axes: FloatArray3x3 = np.array([-ut.xaxis, -ut.yaxis, ut.zaxis]).T
-    phtgm2real_scale_frt: float = 1.0
-    logfrt_ref_plane_axis_pos: float = 0.0
+    ptg2real_scale_frt: float = 1.0
+    logfrt_axes = np.array([-ut.xaxis, -ut.yaxis, ut.zaxis]).T
+    logfrt_ref_plane_axis_pos = 0.0
     # bck: the desired pcd tri-axes and translation vector in the global coord
-    logbck_axes: FloatArray3x3 = np.array([ut.xaxis, ut.yaxis, ut.zaxis]).T
-    phtgm2real_scale_bck: float = 1.0
-    logbck_ref_plane_axis_pos: float = 0.0
+    ptg2real_scale_bck: float = 1.0
+    logbck_axes = np.array([ut.xaxis, ut.yaxis, ut.zaxis]).T
+    logbck_ref_plane_axis_pos = 0.0
+    dist_bt_refs_ft: float = 0.0
 
-    match use_clustering:
-        # Flir camera, multiple captures
-        case "PHTGM_SHOP":
-            vec2sky = -ut.yaxis
-            vec2sensor = -ut.zaxis
-            pcd_folder = (
-                "C:\\Users\\SteveYin\\MyCode\\datalog-mvp-scaler\\data_local"
+    ang_offset: float = np.pi / 6
+    uvw_scale = 0.2
+
+    which_data: str = data_type[2]
+    match which_data:
+        case "snoqualmie-phtgm":
+            # for snoqualmie phtgm pcds on 5/23/2023
+            vec2sky, vec2snr = -ut.yaxis, -ut.zaxis
+            # which_load, which_end = 1, "frt"
+            # ptg2real_scale, floor_ht = 0.568, 2.15
+            # which_load, which_end = 1, "bck"
+            # ptg2real_scale, floor_ht = 0.539, 1.7
+            # which_load, which_end = 2, "frt"
+            # ptg2real_scale, floor_ht = 1.027, 2.15
+            # which_load, which_end = 2, "bck"
+            # ptg2real_scale, floor_ht = 0.514, 1.7
+            which_load, dist_bt_refs_ft = 3, 38.25
+            ptg2real_scale_frt, ptg2real_scale_bck = 0.529, 1.844
+            floor_ht_frt, floor_ht_bck = 2.15, 1.70
+            # which_load, which_end = 3, "bck"
+            # ptg2real_scale, floor_ht = 1.844, 1.7
+            # which_load, which_end = 4, "frt"
+            # ptg2real_scale, floor_ht = 0.529, 1.8
+            # which_load, which_end = 4, "bck"
+            # ptg2real_scale, floor_ht = 1.257, 1.7
+
+            folder_name = "C:\\Users\\SteveYin\\MyData"
+            mrun_name = "snofield20230523\\voi_pcd"
+            logfrt_name = f"mrun_snoload{which_load}frt_finefeat"
+            logbck_name = f"mrun_snoload{which_load}bck_finefeat"
+            logfrt_ref_plane_axis_pos = 0.0
+            logbck_ref_plane_axis_pos = (
+                dist_bt_refs_ft * ut.foot2inch * ut.inch2mm / ut.m2mm
             )
-            logfrt_name = "mrun_logs_on_testbed_20MP_202304251740_18_crop.ply"
-            logbck_name = "mrun_logs_on_testbed_20MP_202304271449_9_crop.ply"
+
+        case "snoqualmie-lidar":
+            # for snoqualmie lidar pcds on 5/23/2023
+            vec2sky, vec2snr = -ut.yaxis, -ut.xaxis
+            which_load, which_snr, which_step = 3, 102, 1
+            ptg2real_scale_frt, ptg2real_scale_bck = 0.529, 1.844
+            floor_ht_frt, floor_ht_bck = 2.15, 1.7
+            dist_bt_refs_ft = 38.25
+
+            folder_name = "C:\\Users\\SteveYin\\MyData"
+            mrun_name = "snofield20230523\\voi_pcd"
+            logfrt_name = f"pcd-{which_load}-{which_snr}-front-{which_step}"
+            logbck_name = f"pcd-{which_load}-{which_snr}-back-{which_step}"
+            logfrt_ref_plane_axis_pos = 0.0
+            logbck_ref_plane_axis_pos = (
+                dist_bt_refs_ft * ut.foot2inch * ut.inch2mm / ut.m2mm
+            )
+
+        case "inshop-phtgm":
+            vec2sky, vec2snr = -ut.yaxis, -ut.zaxis
+            folder_name = "C:\\Users\\SteveYin\\MyCode"
+            mrun_name = "datalog-mvp-scaler\\data_local"
+            # Flir camera, multiple captures
+            logfrt_name = "mrun_logs_on_testbed_20MP_202304251740_18"  # front
+            logbck_name = "mrun_logs_on_testbed_20MP_202304271449_9"  # back
             logfrt_ref_plane_axis_pos = 0
             logbck_ref_plane_axis_pos = 1480.0
 
-        case "PHTGM_SNO":
-            vec2sky = -ut.yaxis
-            vec2sensor = -ut.zaxis
-            pcd_folder = "C:\\Users\\SteveYin\\MyData\\snofield20230523"
-            logfrt_name = "mrun_snoload3frt_finefeat_crop.ply"
-            logbck_name = "mrun_snoload3bck_finefeat_crop.ply"
-            logfrt_ref_plane_axis_pos = 0.0
-            logbck_ref_plane_axis_pos = (
-                38.25 * ut.foot2inch * ut.inch2mm / ut.m2mm
-            )
-            phtgm2real_scale_frt = 0.529
-            phtgm2real_scale_bck = 1.844
-
-        case "LIDAR_SHOP":
-            vec2sky = ut.zaxis
-            vec2sensor = -ut.xaxis
-            pcd_folder = "C:\\Users\\SteveYin\\MyCode\\datalog-mvp-scaler\\data"
+        case "inshop-lidar":
+            vec2sky, vec2snr = ut.zaxis, -ut.xaxis
+            folder_name = "C:\\Users\\SteveYin\\MyCode"
+            mrun_name = "datalog-mvp-scaler\\data_local"
             # Livox MID-70, multiple captures
             logfrt_name = "pcd-apr25-in-5ftwd-3.4166ftht-1_crop.ply"
             logbck_name = "pcd-apr27-in-5ftwd-3.4166ftht-back-1_crop.ply"
@@ -105,38 +151,34 @@ if __name__ == "__main__":
             logbck_ref_plane_axis_pos = 1480.0
 
         case _:
-            sys.exit("case not handled")
+            sys.exit("case not handled when loading pcd data file...")
 
     # load front section pcd from the file
-    pcd_frt: PointCloud = ut.load_pcd(pcd_path=f"{pcd_folder}\\{logfrt_name}")
+    pcd_frt, _ = ut.load_dataset(
+        data_path=f"{folder_name}\\{mrun_name}\\{logfrt_name}_crop.ply"
+    )
     ind: list[int]
     # a little denoise to sparse the PCD
-    # if phtgm_or_lidar:
-    #     pcd_frt, ind = pcd_frt.remove_statistical_outlier(
-    #         nb_neighbors=30, std_ratio=0.5
-    #     )
-    # else:
-    #     pcd_frt, ind = pcd_frt.remove_statistical_outlier(
-    #         nb_neighbors=10, std_ratio=0.5
-    #     )
+    if which_data == "inshop-phtgm":
+        pcd_frt, ind = pcd_frt.remove_statistical_outlier(
+            nb_neighbors=30, std_ratio=0.5
+        )
     # sanity check before proceeding further
     ut.sck.is_valid_pcd(pcd_frt, nameof(pcd_frt))
-    pcd_frt.scale(phtgm2real_scale_frt, pcd_frt.get_center())
+    pcd_frt.scale(ptg2real_scale_frt, pcd_frt.get_center())
 
     # load back section pcd from the file
-    pcd_bck: PointCloud = ut.load_pcd(pcd_path=f"{pcd_folder}\\{logbck_name}")
+    pcd_bck, _ = ut.load_dataset(
+        data_path=f"{folder_name}\\{mrun_name}\\{logbck_name}_crop.ply"
+    )
     # a little denoise to sparse the PCD
-    # if phtgm_or_lidar:
-    #     pcd_bck, ind = pcd_bck.remove_statistical_outlier(
-    #         nb_neighbors=30, std_ratio=0.5
-    #     )
-    # else:
-    #     pcd_bck, ind = pcd_bck.remove_statistical_outlier(
-    #         nb_neighbors=10, std_ratio=0.5
-    #     )
+    if which_data == "inshop-phtgm":
+        pcd_bck, ind = pcd_bck.remove_statistical_outlier(
+            nb_neighbors=30, std_ratio=0.5
+        )
     # sanity check before proceesing further
     ut.sck.is_valid_pcd(pcd_bck, nameof(pcd_bck))
-    pcd_bck.scale(phtgm2real_scale_bck, pcd_bck.get_center())
+    pcd_bck.scale(ptg2real_scale_bck, pcd_bck.get_center())
 
     # =======================================================================
     # STEP 2: preprocessing PCD
@@ -148,7 +190,7 @@ if __name__ == "__main__":
         pcd_raw=pcd_frt,
         pcd_idx=[-1] * len(pcd_frt.points),
         vec2sky=vec2sky,
-        vec2sensor=vec2sensor,
+        vec2snr=vec2snr,
         disp_info=disp_info,
         disp_progress=disp_progress,
     )
@@ -168,7 +210,7 @@ if __name__ == "__main__":
         pcd_raw=pcd_bck,
         pcd_idx=[-1] * len(pcd_bck.points),
         vec2sky=vec2sky,
-        vec2sensor=vec2sensor,
+        vec2snr=vec2snr,
         disp_info=disp_info,
         disp_progress=disp_progress,
     )
@@ -189,10 +231,10 @@ if __name__ == "__main__":
     param_patch_det: ParamPlanarPatchDetection
     param_fid_det: ParamFiducialDetection
     param_logend_det: ParamLogendDetection
-    match use_clustering:
+    match which_data:
         # dealing with photogrammetry specific params
-        case "PHTGM_SHOP":
-            param_patch_det = ut.ParamPlanarPatchDetection(
+        case "inshop_phtgm":
+            param_patch_det = ParamPlanarPatchDetection(
                 normal_variance_threshold_deg=30,  # 60
                 coplanarity_deg=75,  # 75
                 outlier_ratio=0.25,  # 0.75
@@ -201,14 +243,14 @@ if __name__ == "__main__":
                 search_knn=30,  # 30
             )
             # setup ref_plane/fiducials detection parameters
-            param_fid_det = ut.ParamFiducialDetection(
-                fid_patch_ang_lo=ang_offset,
-                fid_patch_ang_hi=np.pi - ang_offset,
+            param_fid_det = ParamFiducialDetection(
+                fid_patch_ang_lo=np.pi / 4,
+                fid_patch_ang_hi=np.pi / 4 * 3,
                 fid_patch_ratio_uv_lo=0.33,
                 fid_patch_ratio_uv_hi=3.0,
             )
-            # setup log-end patch detection parameters
-            param_logend_det = ut.ParamLogendDetection(
+            # setup log patch detection parameters
+            param_logend_det = ParamLogendDetection(
                 pose_ang_lo=ang_offset,
                 pose_ang_hi=np.pi - ang_offset,
                 diag_uv_lo=0.12,
@@ -218,36 +260,63 @@ if __name__ == "__main__":
                 grd_hgt_lo=0.12,
             )
 
-        case "PHTGM_SNO":
-            param_patch_det = ut.ParamPlanarPatchDetection(
-                normal_variance_threshold_deg=20,  # 60
+        case "snoqualmie-phtgm":
+            param_patch_det = ParamPlanarPatchDetection(
+                normal_variance_threshold_deg=25,  # 60
                 coplanarity_deg=60,  # 75
                 outlier_ratio=0.25,  # 0.75
                 min_plane_edge_len=0,  # 0
-                min_num_pts=0,  # 0
-                search_knn=30,  # 30
+                min_num_pts=10,  # 0
+                search_knn=5,  # 30
             )
             # setup ref_plane/fiducials detection parameters
-            param_fid_det = ut.ParamFiducialDetection(
-                fid_patch_ang_lo=ang_offset,
-                fid_patch_ang_hi=np.pi - ang_offset,
-                fid_patch_ratio_uv_lo=0.33,
-                fid_patch_ratio_uv_hi=3.0,
+            param_fid_det = ParamFiducialDetection(
+                fid_patch_ang_lo=np.pi / 6,
+                fid_patch_ang_hi=np.pi / 6 * 5,
+                fid_patch_ratio_uv_lo=0.25,
+                fid_patch_ratio_uv_hi=4.0,
             )
-            # setup log-end patch detection parameters
-            param_logend_det = ut.ParamLogendDetection(
+            # setup log patch detection parameters
+            param_logend_det = ParamLogendDetection(
                 pose_ang_lo=ang_offset,
                 pose_ang_hi=np.pi - ang_offset,
-                diag_uv_lo=0.08,
-                diag_uv_hi=1.0,
-                ratio_uv_lo=0.75,
-                ratio_uv_hi=1.33,
-                grd_hgt_lo=1.0,
+                diag_uv_lo=0.05,
+                diag_uv_hi=0.75,
+                ratio_uv_lo=0.55,
+                ratio_uv_hi=1.82,
+                grd_hgt_lo=1.7,
+            )
+
+        case "snoqualmie-lidar":
+            param_patch_det = ParamPlanarPatchDetection(
+                normal_variance_threshold_deg=25,  # 60
+                coplanarity_deg=60,  # 75
+                outlier_ratio=0.25,  # 0.75
+                min_plane_edge_len=0,  # 0
+                min_num_pts=10,  # 0
+                search_knn=5,  # 30
+            )
+            # setup ref_plane/fiducials detection parameters
+            param_fid_det = ParamFiducialDetection(
+                fid_patch_ang_lo=np.pi / 6,
+                fid_patch_ang_hi=np.pi / 6 * 5,
+                fid_patch_ratio_uv_lo=0.25,
+                fid_patch_ratio_uv_hi=4.0,
+            )
+            # setup log patch detection parameters
+            param_logend_det = ParamLogendDetection(
+                pose_ang_lo=ang_offset,
+                pose_ang_hi=np.pi - ang_offset,
+                diag_uv_lo=0.05,
+                diag_uv_hi=0.75,
+                ratio_uv_lo=0.55,
+                ratio_uv_hi=1.82,
+                grd_hgt_lo=1.7,
             )
 
         # dealing with lidar pcd, using Lidar specific params
-        case "LIDAR_SHOP":
-            param_patch_det = ut.ParamPlanarPatchDetection(
+        case "inshop-lidar":
+            param_patch_det = ParamPlanarPatchDetection(
                 normal_variance_threshold_deg=45,  # 60
                 coplanarity_deg=45,  # 75
                 outlier_ratio=0.25,  # 0.75
@@ -256,14 +325,14 @@ if __name__ == "__main__":
                 search_knn=10,  # 30
             )
             # setup ref_plane/fiducials detection parameters
-            param_fid_det = ut.ParamFiducialDetection(
+            param_fid_det = ParamFiducialDetection(
                 fid_patch_ang_lo=ang_offset,
                 fid_patch_ang_hi=np.pi - ang_offset,
-                fid_patch_ratio_uv_lo=0.25,
-                fid_patch_ratio_uv_hi=4.0,
+                fid_patch_ratio_uv_lo=0.33,
+                fid_patch_ratio_uv_hi=3.0,
             )
             # setup log patch detection parameters
-            param_logend_det = ut.ParamLogendDetection(
+            param_logend_det = ParamLogendDetection(
                 pose_ang_lo=ang_offset,
                 pose_ang_hi=np.pi - ang_offset,
                 diag_uv_lo=0.08,
@@ -277,8 +346,7 @@ if __name__ == "__main__":
         case _:
             sys.exit(
                 f"[INFO: {ut.currentFuncName()}]: "
-                f"use_clustering definition not supported in "
-                f"opt_clustering({opt_clustering})"
+                f"which_data definition {which_data} not supported."
             )
 
     # =======================================================================
@@ -291,7 +359,7 @@ if __name__ == "__main__":
         pcd_raw=logfrt_pcd,
         pcd_idx=voi_frt.pcd_idx,
         vec2sky=logfrt_axes[:, 2],
-        vec2sensor=logfrt_axes[:, 1],
+        vec2snr=logfrt_axes[:, 1],
         disp_info=disp_info,
         disp_progress=disp_progress,
     )
@@ -311,7 +379,7 @@ if __name__ == "__main__":
         pcd_raw=logbck_pcd,
         pcd_idx=voi_bck.pcd_idx,
         vec2sky=logbck_axes[:, 2],
-        vec2sensor=logbck_axes[:, 1],
+        vec2snr=logbck_axes[:, 1],
         disp_info=disp_info,
         disp_progress=disp_progress,
     )
@@ -334,13 +402,13 @@ if __name__ == "__main__":
     logfrt.draw_log_scaling_results(
         vis=vis,
         label_name="frt",
-        uvw_scale=uvw_mesh_scale,
+        uvw_scale=uvw_scale,
         uvw_selected=np.array([False, False, True]),
     )
     logbck.draw_log_scaling_results(
         vis=vis,
         label_name="bck",
-        uvw_scale=uvw_mesh_scale,
+        uvw_scale=uvw_scale,
         uvw_selected=np.array([False, False, True]),
     )
     vis.reset_camera_to_default()

@@ -11,6 +11,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import utility as ut
 import copy
+from utility import FloatArray3, FloatArray4, FloatArrayN, IntArrayN  # noqa
+from utility import FloatArray3x3, FloatArrayNx3, BoolArray3, BoolArrayN  # noqa
+from utility import PointCloud, TriangleMesh, OrientedBoundingBox  # noqa
 from pointcloudhandler import PointcloudHandler
 
 
@@ -23,13 +26,15 @@ if __name__ == "__main__":
     whick_snr: int
     which_end: str  # 'frt' or 'bck'
     which_step: int
+    vec2sky: FloatArray3
+    vec2snr: FloatArray3
     ptg2real_scale: float = 1.0
     floor_ht: float = 1.5
     folder_name: str = ""
     mrun_name: str = ""
     obj_name: str = ""
 
-    which_data: str = data_type[0]
+    which_data: str = data_type[2]
     match which_data:
         case "snoqualmie-phtgm":
             # Snoqualmie test site data 5/23/2023
@@ -56,7 +61,7 @@ if __name__ == "__main__":
             folder_name = "C:\\Users\\SteveYin\\MyData"
             mrun_name = "snofield20230523\\voi_pcd"
             obj_name = f"mrun_snoload{which_load}{which_end}_finefeat"
-            vec2sky, vec2sensor = -ut.yaxis, -ut.zaxis
+            vec2sky, vec2snr = -ut.yaxis, -ut.zaxis
 
         case "snoqualmie-lidar":
             # Snoqualmie test site data 5/23/2023
@@ -71,14 +76,14 @@ if __name__ == "__main__":
             folder_name = "C:\\Users\\SteveYin\\MyData"
             mrun_name = "snofield20230523\\voi_pcd"
             obj_name = f"pcd-{which_load}-{which_snr}-{which_end}-{which_step}"
-            vec2sky, vec2sensor = -ut.yaxis, -ut.xaxis
+            vec2sky, vec2snr = -ut.yaxis, -ut.xaxis
 
         case _:
             sys.exit("case not handled when loading pcd data file...")
 
     # load the pcd data
-    pcd = ut.load_pcd(
-        pcd_path=f"{folder_name}\\{mrun_name}\\{obj_name}_crop.ply"
+    pcd, _ = ut.load_dataset(
+        data_path=f"{folder_name}\\{mrun_name}\\{obj_name}_crop.ply"
     )
     ut.sck.is_valid_pcd(pcd, "pcd")
     pcd.scale(ptg2real_scale, pcd.get_center())
@@ -89,7 +94,7 @@ if __name__ == "__main__":
         pcd_raw=pcd,
         pcd_idx=[-1] * len(pcd.points),
         vec2sky=vec2sky,
-        vec2sensor=vec2sensor,
+        vec2snr=vec2snr,
         disp_info=True,
         disp_progress=True,
     )
@@ -136,9 +141,9 @@ if __name__ == "__main__":
         ratio_uv_hi=3.0,
     )
 
-    # select points whose normal vecs align with vec2sensor direction
+    # select points whose normal vecs align with vec2snr direction
     aa = np.array(voi.pcd.normals)
-    bb = np.tile(vec2sensor, (len(aa), 1))
+    bb = np.tile(vec2snr, (len(aa), 1))
     dd = ut.vector_angle(aa, bb)
     dd_idx = np.where((dd <= np.pi / 6) | (dd >= np.pi / 6 * 5))[0].tolist()
     alabel = 0

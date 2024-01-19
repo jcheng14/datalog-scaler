@@ -28,9 +28,9 @@ FloatArrayNx4 = Annotated[npt.NDArray[DT_FLOAT], Literal["N", 4]]
 IntArrayN = Annotated[npt.NDArray[np.int16], Literal["N"]]
 BoolArray3 = Annotated[npt.NDArray[np.bool_], Literal[3]]
 BoolArrayN = Annotated[npt.NDArray[np.bool_], Literal["N"]]
-PointCloud: TypeAlias = o3d.cpu.pybind.geometry.PointCloud
-TriangleMesh: TypeAlias = o3d.cpu.pybind.geometry.TriangleMesh
-OrientedBoundingBox: TypeAlias = o3d.cpu.pybind.geometry.OrientedBoundingBox
+PointCloud: TypeAlias = o3d.pybind.geometry.PointCloud
+TriangleMesh: TypeAlias = o3d.pybind.geometry.TriangleMesh
+OrientedBoundingBox: TypeAlias = o3d.pybind.geometry.OrientedBoundingBox
 
 
 def currentFuncName(n: int = 0) -> str:
@@ -948,6 +948,93 @@ def load_pcd(pcd_path: str, disp_info: bool = True) -> PointCloud:
     return pcd
 
 
+def load_dataset(
+    data_path: str, disp_info: bool = True
+) -> Tuple[PointCloud, TriangleMesh]:
+    """
+    Load triangle mesh or point cloud from a file, depending on the
+        auto-detected data type in the file.
+
+    Args:
+        data_path(type: string) -- mesh or pcd file path
+        disp_info(type: bool) -- display info or not (default=True)
+
+    Returns:
+        pcd(type: o3d.PointCloud)
+        mesh(type: o3d.TriangleMesh)
+
+    """
+    # Sanity check
+    sck.is_valid_file_path(file_path=data_path)
+
+    mesh: TriangleMesh | None = None
+    pcd: PointCloud
+    geometry_type = o3d.io.read_file_geometry_type(data_path)
+    if geometry_type & o3d.io.CONTAINS_TRIANGLES:
+        if disp_info:
+            print(
+                f"[INFO: {currentFuncName()}]: "
+                f"{data_path} appears to be a triangle mesh file."
+            )
+        try:
+            mesh = o3d.io.read_triangle_mesh(
+                filename=data_path,
+                enable_post_processing=True,
+                print_progress=disp_info,
+            )
+        except Exception as err:
+            print(
+                f"[ERROR: {currentFuncName()}]: Unexpected {err=}, {type(err)=}"
+            )
+            raise
+        finally:
+            if disp_info:
+                print(
+                    f"[INFO: {currentFuncName()}]: loaded mesh from {data_path}"
+                )
+        # extract pcd from mesh
+        sck.is_valid_mesh(mesh, "mesh")
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = mesh.vertices
+        pcd.colors = mesh.vertex_colors
+        pcd.normals = mesh.vertex_normals
+        ctr, bmn, bmx = get_o3dobj_info(o3dobj=mesh, disp_info=disp_info)
+        ctr, bmn, bmx = get_o3dobj_info(o3dobj=pcd, disp_info=disp_info)
+    else:
+        if disp_info:
+            print(
+                f"[INFO: {currentFuncName()}]: "
+                f"{data_path} appears to be a point cloud file."
+            )
+        try:
+            pcd = o3d.io.read_point_cloud(
+                filename=data_path,
+                format="auto",
+                remove_nan_points=True,
+                remove_infinite_points=True,
+                print_progress=disp_info,
+            )
+        except Exception as err:
+            print(
+                f"[ERROR: {currentFuncName()}]: Unexpected {err=}, {type(err)=}"
+            )
+            raise
+        finally:
+            if disp_info:
+                print(
+                    f"[INFO: {currentFuncName()}]: loaded pcd from {data_path}"
+                )
+        if pcd is not None and pcd.has_points() and not pcd.has_normals():
+            pcd.estimate_normals(
+                search_param=o3d.geometry.KDTreeSearchParamHybrid(
+                    radius=0.01, max_nn=30
+                )
+            )
+        ctr, bmn, bmx = get_o3dobj_info(o3dobj=pcd, disp_info=disp_info)
+
+    return (pcd, mesh)
+
+
 def get_o3dobj_info(
     o3dobj: PointCloud | TriangleMesh,
     o3dobj_name: str = "",
@@ -974,7 +1061,7 @@ def get_o3dobj_info(
     bmn = o3dobj.get_min_bound()
     bmx = o3dobj.get_max_bound()
     if disp_info:
-        if isinstance(o3dobj, o3d.cpu.pybind.geometry.PointCloud):
+        if isinstance(o3dobj, o3d.pybind.geometry.PointCloud):
             o3dobj_name = "pcd" if o3dobj_name == "" else o3dobj_name
             print(
                 f"[INFO: {currentFuncName()}]: "
@@ -986,7 +1073,7 @@ def get_o3dobj_info(
                 f"     has normals: {o3dobj.has_normals()} "
             )
 
-        if isinstance(o3dobj, o3d.cpu.pybind.geometry.TriangleMesh):
+        if isinstance(o3dobj, o3d.pybind.geometry.TriangleMesh):
             o3dobj_name = "mesh" if o3dobj_name == "" else o3dobj_name
             print(
                 f"[INFO: {currentFuncName()}]: "
@@ -1041,13 +1128,13 @@ def get_o3dobj_obox_and_uvw(
     sck.is_valid_color_vector3(mw_color, nameof(mw_color))
 
     obox: OrientedBoundingBox
-    if isinstance(o3dobj, o3d.cpu.pybind.geometry.PointCloud):
+    if isinstance(o3dobj, o3d.pybind.geometry.PointCloud):
         sck.is_valid_pcd(o3dobj, "pcd")
         obox = o3dobj.get_oriented_bounding_box(robust=True)
-    elif isinstance(o3dobj, o3d.cpu.pybind.geometry.TriangleMesh):
+    elif isinstance(o3dobj, o3d.pybind.geometry.TriangleMesh):
         sck.is_valid_mesh(o3dobj, "mesh")
         obox = o3dobj.get_oriented_bounding_box(robust=True)
-    elif isinstance(o3dobj, o3d.cpu.pybind.geometry.OrientedBoundingBox):
+    elif isinstance(o3dobj, o3d.pybind.geometry.OrientedBoundingBox):
         obox = o3dobj
     else:
         obox = get_xyz_axes(frame_size=0.5).get_oriented_bounding_box()
@@ -1604,7 +1691,7 @@ def flip_obox(
 
 
 def draw_oriented_bounding_boxes(
-    vis: o3d.cpu.pybind.visualization.O3DVisualizer,
+    vis: o3d.pybind.visualization.O3DVisualizer,
     oboxes: list[OrientedBoundingBox],
     vec2sensor: FloatArray3,
     label_name: str,

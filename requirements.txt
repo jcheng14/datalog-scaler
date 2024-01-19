@@ -4,7 +4,7 @@ flake8
 mypy
 matplotlib
 numpy
-scikit-learn
+sklearn
 open3d
 hdbscan
 pyquaternion

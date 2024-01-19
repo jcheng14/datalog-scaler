@@ -16,14 +16,14 @@ if __name__ == "__main__":
         "snoqualmie-phtgm",
         "snoqualmie-lidar",
     ]
-    which_data: str = data_type[3]
+    which_data: str = data_type[2]
     load_num: int = 3  # 1,2,3,4 for snoqualmie onsite data
     # which_end: str = "bck"  # 'frt' or 'bck' for snoqualmie onsite phtgm data
     which_end: str = "back"  # 'frt' or 'bck' for snoqualmie onsite phtgm data
     which_snr: int = 102
     which_row: int = 1
     mesh_fraction: float = 1.0
-    show_intermediate: bool = False
+    show_intermediate: bool = True
     folder_name: str = ""
     mrun_name: str = ""
     obj_name: str = ""
@@ -43,8 +43,11 @@ if __name__ == "__main__":
             # mrun_name = "mrun_logs_on_testbed_12MP_202304111609_8"
 
             # load mesh into Open3D, then extract pcd from the mesh
-            pcd_original, mesh_original = ut.load_pcd_from_mesh(
-                mesh_path=f"{folder_name}\\{mrun_name}\\{obj_name}"
+            # pcd_original, mesh_original = ut.load_pcd_from_mesh(
+            #     mesh_path=f"{folder_name}\\{mrun_name}\\{obj_name}"
+            # )
+            pcd_original, mesh_original = ut.load_dataset(
+                data_path=f"{folder_name}\\{mrun_name}\\{obj_name}"
             )
             if show_intermediate:
                 o3d.visualization.draw(
@@ -94,7 +97,7 @@ if __name__ == "__main__":
         case "in-house-lidar":
             folder_name = "C:\\Users\\SteveYin\\MyCode\\datalog-lidar"
             mrun_name = "data"
-            pcd_name = "lidar_data_apr_12_1frame.pcd"
+            # pcd_name = "lidar_data_apr_12_1frame.pcd"
             pcd_name = "lidar_data_apr12_5ftwd_2fttall_1_frame_crop.ply"
             # mrun_name = "LiDAR-Indoor-5ftWD"
             # pcd_name = "pcd-apr25-in-5ftwd-3.4166ftht-1.pcd"

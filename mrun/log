@@ -1,0 +1,138 @@
+[2024-01-15 13:34:23.730788] [0x00007f6138865000] [trace]   Embedded OCIO configuration file: '/home/jamesxyye/Downloads/Meshroom-2023.3.0/aliceVision/share/aliceVision/config.ocio' found.
+Program called with the following parameters:
+ * angleHardThreshold = 90
+ * bestScoreThreshold = 0.1
+ * bumpType =  Unknown Type "N11aliceVision4mesh16EBumpMappingTypeE" (default)
+ * colorMappingFileType =  Unknown Type "N11aliceVision5image14EImageFileTypeE"
+ * correctEV = 1
+ * displacementMappingFileType =  Unknown Type "N11aliceVision5image14EImageFileTypeE" (default)
+ * downscale =  Unknown Type "j"
+ * fillHoles = 0
+ * flipNormals = 0
+ * forceVisibleByAllVertices = 0
+ * heightFileType =  Unknown Type "N11aliceVision5image14EImageFileTypeE" (default)
+ * imagesFolder = "/home/jamesxyye/Downloads/Meshroom-2023.3.0/MeshroomCache/PrepareDenseScene/06b12530f891d92f5f849ad9df2045aedfa1c74a"
+ * input = "/home/jamesxyye/Downloads/Meshroom-2023.3.0/MeshroomCache/Meshing/96b8f338a110e32b4d9b22057c544568259bab3e/densePointCloud.abc"
+ * inputMesh = "/home/jamesxyye/Downloads/Meshroom-2023.3.0/MeshroomCache/MeshFiltering/97b77dba03fc4b3f6759084119fb16480bb6171a/mesh.obj"
+ * inputRefMesh = ""
+ * maxCoresAvailable =  Unknown Type "j" (default)
+ * maxMemoryAvailable = 18446744073709551615 (default)
+ * multiBandDownscale =  Unknown Type "j"
+ * multiBandNbContrib =  Unknown Type "St6vectorIiSaIiEE"
+ * normalFileType =  Unknown Type "N11aliceVision5image14EImageFileTypeE" (default)
+ * output = "/home/jamesxyye/Downloads/Meshroom-2023.3.0/MeshroomCache/Texturing/dfa236efbece144a53f0a5d107288dcbaa02f758"
+ * outputColorSpace =  Unknown Type "N11aliceVision5image16EImageColorSpaceE"
+ * outputMeshFileType =  Unknown Type "N11aliceVision4mesh9EFileTypeE"
+ * padding =  Unknown Type "j"
+ * subdivisionTargetRatio = 0.8
+ * textureSide =  Unknown Type "j"
+ * unwrapMethod = "Basic"
+ * useScore = 1
+ * useUDIM = 1
+ * verboseLevel = "info"
+ * visibilityRemappingMethod = "PullPush"
+ * workingColorSpace =  Unknown Type "N11aliceVision5image16EImageColorSpaceE"
+
+Hardware : 
+	Detected core count : 16
+	OpenMP will use 16 cores
+	Detected available memory : 25527 Mo
+
+[13:34:23.738060][info] Load dense point cloud.
+[13:34:23.788156][warning] Alembic LOAD: NO OBSERVATIONS_WITH_FEATURES: , mvg_visibilityFeatId: 0, mvg_visibilityFeatPos: 0, OBSERVATIONS_WITH_FEATURES flag: false
+[13:34:23.869505][info] Found 1 image dimension(s): 
+[13:34:23.869581][info] 	- [4032x3024]
+[13:34:23.875651][info] Overall maximum dimension: [4032x3024]
+[13:34:23.875736][info] Load input mesh.
+[13:34:24.633773][info] Convert dense point cloud into ref mesh
+[13:34:24.706040][info] remapMeshVisibility based on triangles start.
+[13:34:25.024052][info] remapMeshVisibility done.
+[13:34:25.024408][info] Input mesh has no UV coordinates, start unwrapping (Basic)
+[13:34:25.024467][info] Generating UVs (textureSide: 8192; padding: 5).
+[13:34:25.024487][info] Creating texture charts.
+[13:34:25.243574][info] Packing texture charts (309334 charts).
+[13:34:25.800500][info] Finalize packed charts (832 charts).
+[13:34:25.818309][info] Creating texture atlases.
+[13:34:25.818498][info] 	- texture atlas 1
+[13:34:25.821599][info] Filled with 832 charts.
+[13:34:25.945038][info] Unwrapping done.
+[13:34:25.945072][info] Subdivide mesh.
+[13:34:25.945078][info] nb pts init: 154835
+[13:34:25.945092][info] nb tris init: 309334
+[13:34:25.945096][info] nb points in refMesh: 154841
+[13:34:25.945100][info] targetNbPts: 123872
+[13:34:25.975510][info] No subdivision needed.
+[13:34:25.975569][info] Number of triangle subdivisions: 0
+[13:34:25.975577][info] updateAtlases
+[13:34:26.025478][info] remapMeshVisibility based on triangles start.
+[13:34:26.362045][info] remapMeshVisibility done.
+[13:34:26.366618][info] Generate textures.
+[13:34:26.366883][info] Texturing: Use multiband blending with the following contributions per band:
+[13:34:26.366896][info]   - 1
+[13:34:26.366903][info]   - 5
+[13:34:26.366908][info]   - 10
+[13:34:26.366914][info] Texturing in srgb colorspace.
+[13:34:26.366965][info] Images loaded from cache with: exposure correction
+[13:34:26.366986][info] nbAtlas: 1
+[13:34:26.366992][info] availableRam: 25341
+[13:34:26.366998][info] availableMem: 24229
+[13:34:26.367003][info] memoryPerAtlas: 3628
+[13:34:26.367009][info] nbAtlasMax (after rounding): 1
+[13:34:26.367015][info] Total amount of available RAM: 25341 MB.
+[13:34:26.367021][info] Total amount of memory remaining for the computation: 24229 MB.
+[13:34:26.367027][info] Total amount of an image in memory: 139 MB.
+[13:34:26.367033][info] Total amount of an atlas pyramid in memory: 3072 MB.
+[13:34:26.367038][info] Processing 1 atlases by chunks of 1
+[13:34:26.367049][info] Generating texture for atlases 1 to 1
+[13:34:26.367057][info] Generating texture for atlas 1/1 (309334 triangles).
+[13:34:27.453369][info] Reading pixel color.
+[13:34:29.042867][info] - camera 408063046 (1/7) with contributions to 1 texture files:
+[13:34:29.459524][info]   exposure compensation for image 1: 1.25
+[13:34:30.376498][info]   - Texture file: 1
+[13:34:30.376605][info]       - band 1: 5712 triangles.
+[13:34:30.535517][info]       - band 2: 222734 triangles.
+[13:34:31.280287][info]       - band 3: 60494 triangles.
+[13:34:31.368922][info] - camera 580670362 (2/7) with contributions to 1 texture files:
+[13:34:31.767695][info]   exposure compensation for image 2: 1
+[13:34:32.570748][info]   - Texture file: 1
+[13:34:32.570806][info]       - band 1: 12345 triangles.
+[13:34:32.730200][info]       - band 2: 227372 triangles.
+[13:34:33.442068][info]       - band 3: 35692 triangles.
+[13:34:33.526088][info] - camera 629336682 (3/7) with contributions to 1 texture files:
+[13:34:33.866546][info]   exposure compensation for image 3: 1.25
+[13:34:34.684927][info]   - Texture file: 1
+[13:34:34.684979][info]       - band 1: 37911 triangles.
+[13:34:34.994387][info]       - band 2: 217744 triangles.
+[13:34:35.523605][info]       - band 3: 12459 triangles.
+[13:34:35.571576][info] - camera 1152301840 (4/7) with contributions to 1 texture files:
+[13:34:35.924945][info]   exposure compensation for image 4: 1
+[13:34:36.816161][info]   - Texture file: 1
+[13:34:36.816235][info]       - band 1: 16408 triangles.
+[13:34:37.071089][info]       - band 2: 197379 triangles.
+[13:34:37.662601][info]       - band 3: 65517 triangles.
+[13:34:37.811407][info] - camera 1383503936 (5/7) with contributions to 1 texture files:
+[13:34:38.197519][info]   exposure compensation for image 5: 1.25
+[13:34:39.016667][info]   - Texture file: 1
+[13:34:39.016696][info]       - band 1: 102873 triangles.
+[13:34:39.306193][info]       - band 2: 181048 triangles.
+[13:34:39.905863][info]       - band 3: 1468 triangles.
+[13:34:39.926425][info] - camera 1774616714 (6/7) with contributions to 1 texture files:
+[13:34:40.342801][info]   exposure compensation for image 6: 0.78125
+[13:34:41.190903][info]   - Texture file: 1
+[13:34:41.190971][info]       - band 1: 42296 triangles.
+[13:34:41.439768][info]       - band 2: 179128 triangles.
+[13:34:41.957889][info]       - band 3: 30970 triangles.
+[13:34:42.012422][info] - camera 2019450583 (7/7) with contributions to 1 texture files:
+[13:34:42.385427][info]   exposure compensation for image 7: 1.25
+[13:34:43.392076][info]   - Texture file: 1
+[13:34:43.392121][info]       - band 1: 91142 triangles.
+[13:34:43.652033][info]       - band 2: 191349 triangles.
+[13:34:44.571898][info]       - band 3: 2555 triangles.
+[13:34:44.584629][info] Create texture 1
+[13:34:44.584682][info]   - Computing final (average) color.
+[13:34:46.092311][info]   - Edge padding (15 pixels).
+[13:34:46.657414][info]   - Downscaling texture (2x).
+[13:34:52.078349][info]   - Writing texture file: /home/jamesxyye/Downloads/Meshroom-2023.3.0/MeshroomCache/Texturing/dfa236efbece144a53f0a5d107288dcbaa02f758/texture_1001.exr
+[13:34:53.057766][info] Save /home/jamesxyye/Downloads/Meshroom-2023.3.0/MeshroomCache/Texturing/dfa236efbece144a53f0a5d107288dcbaa02f758/texturedMesh.obj mesh file
+[13:34:54.606625][info] Save mesh to obj done.
+[13:34:54.616794][info] Task done in (s): 30.883000

@@ -7,7 +7,6 @@ import sys
 import open3d as o3d
 import open3d.visualization.gui as gui  # noqa
 import numpy as np
-from varname import nameof
 import utility as ut
 from utility import FloatArray3, FloatArray4, FloatArrayN, IntArrayN  # noqa
 from utility import FloatArray3x3, FloatArrayNx3, BoolArray3, BoolArrayN  # noqa
@@ -36,104 +35,125 @@ if __name__ == "__main__":
     # setup condition parameters
     disp_progress: bool = True
     disp_info: bool = True
-    phtgm_or_lidar: bool = True
-    load_original_phtgm_mesh: bool = phtgm_or_lidar and False
-    opt_clustering: list[str] = [
-        "PHTGM_SHOP",
-        "PHTGM_SNO",
-        "LIDAR_SHOP",
+
+    data_type: list[str] = [
+        "snoqualmie-phtgm",
+        "snoqualmie-lidar",
+        "inshop-phtgm",
+        "inshop-lidar",
     ]
-    use_clustering: str = opt_clustering[1]
-    ang_offset: float = np.pi / 6
-    uvw_mesh_scale: float = 0.2
-    # the desired pcd tri-axes & the translation vector for placing the pcd
-    # in the global coord
-    dst_pcd_axes: FloatArray3x3 = np.array([-ut.xaxis, -ut.yaxis, ut.zaxis]).T
-    # dst_pcd_axes = np.array([ut.xaxis, ut.yaxis, ut.zaxis]).T
-
+    which_load: int  # 1,2,3,4 for snoqualmie onsite load number
+    whick_snr: int
+    which_end: str  # 'frt' or 'bck'
+    which_step: int
     vec2sky: FloatArray3
-    vec2sensor: FloatArray3
-    phtgm2real_scale: float = 1.0
-    pcd_folder: str
-    pcd_name: str
+    vec2snr: FloatArray3
+    ptg2real_scale: float = 1.0
+    floor_ht: float = 1.5
+    folder_name: str = ""
+    mrun_name: str = ""
+    obj_name: str = ""
 
-    load_num: int = 3  # 1,2,3,4 for snoqualmie onsite data
-    which_end: str = "frt"  # 'frt' or 'bck' for snoqualmie onsite data
+    which_data: str = data_type[2]
+    match which_data:
+        case "snoqualmie-phtgm":
+            # for snoqualmie phtgm pcds on 5/23/2023
+            vec2sky, vec2snr = -ut.yaxis, -ut.zaxis
+            # which_load, which_end = 1, "frt"
+            # ptg2real_scale, floor_ht = 0.568, 2.15
+            # which_load, which_end = 1, "bck"
+            # ptg2real_scale, floor_ht = 0.539, 1.7
+            # which_load, which_end = 2, "frt"
+            # ptg2real_scale, floor_ht = 1.027, 2.15
+            # which_load, which_end = 2, "bck"
+            # ptg2real_scale, floor_ht = 0.514, 1.7
+            which_load, which_end = 3, "frt"
+            ptg2real_scale, floor_ht = 0.529, 2.15
+            # which_load, which_end = 3, "bck"
+            # ptg2real_scale, floor_ht = 1.844, 1.7
+            # which_load, which_end = 4, "frt"
+            # ptg2real_scale, floor_ht = 0.529, 1.8
+            # which_load, which_end = 4, "bck"
+            # ptg2real_scale, floor_ht = 1.257, 1.7
 
-    # setup PCD file path
-    if phtgm_or_lidar:
-        vec2sky = -ut.yaxis
-        vec2sensor = -ut.zaxis
+            folder_name = "C:\\Users\\SteveYin\\MyData"
+            mrun_name = "snofield20230523\\voi_pcd"
+            obj_name = f"mrun_snoload{which_load}{which_end}_finefeat"
 
-        pcd_folder = "C:\\Users\\SteveYin\\MyData\\snofield20230523"
-        mrun = f"mrun_snoload{load_num}{which_end}_finefeat"
-        phtgm2real_scale = 0.529 if which_end == "frt" else 1.844  # snoload3
-        pcd_name = f"{mrun}_crop.ply"
+        case "snoqualmie-lidar":
+            # for snoqualmie lidar pcds on 5/23/2023
+            vec2sky, vec2snr = -ut.yaxis, -ut.xaxis
+            which_load, which_snr, which_end = 3, 102, "back"
+            which_step, floor_ht = 1, 1.7
 
-        # phtgm2real_scale = 1.844    # for snoload3bck
-        # pcd_folder: str = (
-        #     "C:\\Users\\SteveYin\\MyCode\\datalog-mvp-scaler\\data_local"
-        # )
-        # Flir camera, multiple captures
-        # mrun: str = "mrun_logs_on_testbed_20MP_202304251740_18"  # front
-        # mrun: str = "mrun_logs_on_testbed_20MP_202304251740_5"  # front
-        # mrun: str = "mrun_logs_on_testbed_20MP_202304271449_9"  # back
-        # Canon EOS 90D, logs and tubes
-        # mrun: str = "mrun_logs_on_testbed_32MP_202303291044"
-        # mrun: str = "mrun_tubes_on_testbed_32MP_202303271646"
-        # iPhone 14PM recessed log close-up
-        # mrun: str = "mrun_logs_on_testbed_12MP_202304111609_8"
+            folder_name = "C:\\Users\\SteveYin\\MyData"
+            mrun_name = "snofield20230523\\voi_pcd"
+            obj_name = f"pcd-{which_load}-{which_snr}-{which_end}-{which_step}"
 
-        # pcd_name: str = f"{mrun}_crop.ply"
+        case "inshop-phtgm":
+            vec2sky, vec2snr = -ut.yaxis, -ut.zaxis
 
-        # if load_original_phtgm_mesh is True:
-        #     mesh_folder = "C:\\Users\\SteveYin\\MyCode\\datalog-photogrammetry"   # noqa
-        #     mesh_name = "texturedMesh.obj"
-        #     pcd_original, mesh_original = ut.load_pcd_from_mesh(
-        #         mesh_path=f"{mesh_folder}\\{mrun}\\{mesh_name}"
-        #     )
+            folder_name = "/home/jamesxyye/Downloads/freshconsulting-datalog-mvp-scaler-0752cd72c8cb/"
+            mrun_name = "mrun"
+            # Flir camera, multiple captures
+            # obj_name = "mrun_logs_on_testbed_20MP_202304251740_18"  # front
+            # obj_name = "mrun_logs_on_testbed_20MP_202304251740_5"  # front
+            # obj_name = "mrun_logs_on_testbed_20MP_202304271449_9"  # back
+            # Canon EOS 90D, logs and tubes
+            # obj_name = "mrun_logs_on_testbed_32MP_202303291044"
+            # obj_name = "mrun_tubes_on_testbed_32MP_202303271646"
+            # iPhone 14PM recessed log close-up
+            # obj_name = "mrun_logs_on_testbed_12MP_202304111609_8"
 
-    else:
-        vec2sky = ut.zaxis
-        vec2sensor = -ut.xaxis
-        pcd_folder = "C:\\Users\\SteveYin\\MyCode\\datalog-mvp-scaler\\data"
-        # pcd_name: str = "lidar_data_apr_12_1frame_crop.ply"
-        # pcd_name: str = "lidar_data_apr12_5ftwd_2fttall_1_frame_crop.ply"
-        # pcd_name: str = "pcd-apr25-in-5ftwd-3.4166ftht-1_crop.ply"
-        # pcd_name: str = "pcd-apr25-in-5ftwd-3.4166ftht-2_crop.ply"
-        pcd_name = "pcd-apr27-in-5ftwd-3.4166ftht-back-1_crop.ply"
-        # pcd_name: str = "pcd-apr27-in-5ftwd-3.4166ftht-back-2_crop.ply"
-        # pcd_name: str = "pcd-apr27-out-5ftwd-3.4166ftht-front-1_crop.ply"
-        # pcd_name: str = "pcd-apr27-out-5ftwd-3.4166ftht-front-2_crop.ply"
-        # pcd_name: str = "pcd-apr27-out-5ftwd-3.4166ftht-back-1_crop.ply"
-        # pcd_name: str = "pcd-apr27-out-5ftwd-3.4166ftht-back-2_crop.ply"
+        case "inshop-lidar":
+            vec2sky, vec2snr = ut.zaxis, -ut.xaxis
+            folder_name = "C:\\Users\\SteveYin\\MyCode"
+            mrun_name = "datalog-mvp-scaler\\data_local"
+            # obj_name = "lidar_data_apr_12_1frame"
+            # obj_name = "lidar_data_apr12_5ftwd_2fttall_1_frame"
+            obj_name = "pcd-apr25-in-5ftwd-3.4166ftht-1"
+            # obj_name = "pcd-apr25-in-5ftwd-3.4166ftht-2"
+            # obj_name = "pcd-apr27-in-5ftwd-3.4166ftht-back-1"
+            # obj_name = "pcd-apr27-in-5ftwd-3.4166ftht-back-2"
+            # obj_name = "pcd-apr27-out-5ftwd-3.4166ftht-front-1"
+            # obj_name = "pcd-apr27-out-5ftwd-3.4166ftht-front-2"
+            # obj_name = "pcd-apr27-out-5ftwd-3.4166ftht-back-1"
+            # obj_name = "pcd-apr27-out-5ftwd-3.4166ftht-back-2"
 
-    # load pcd from the file
-    pcd: PointCloud = ut.load_pcd(pcd_path=f"{pcd_folder}\\{pcd_name}")
-    # a little denoise to sparse the PCD
-    # if phtgm_or_lidar:
-    #     pcd, ind = pcd.remove_statistical_outlier(
-    #         nb_neighbors=30, std_ratio=0.5
-    #     )
-    # else:
-    #     pcd, ind = pcd.remove_statistical_outlier(
-    #         nb_neighbors=10, std_ratio=0.5
-    #     )
-    # sanity check before proceesing further
-    ut.sck.is_valid_pcd(pcd, nameof(pcd))
-    pcd.scale(phtgm2real_scale, pcd.get_center())
+        case _:
+            sys.exit("case not handled when loading pcd data file...")
+
+    # load the pcd data
+    pcd, _ = ut.load_dataset(
+        data_path=f"{folder_name}/cropped_1.ply"
+    )
+    ut.sck.is_valid_pcd(pcd, "pcd")
+    # a little denoise to sparse the inshop phtgm dense pcd
+    if which_data == data_type[2]:
+        pcd, ind = pcd.remove_statistical_outlier(
+            nb_neighbors=30, std_ratio=0.5
+        )
+    pcd.scale(ptg2real_scale, pcd.get_center())
+    pcd.estimate_normals()
 
     # =======================================================================
     # STEP 2: preprocessing PCD
     # find a ground plane, use the ground plane pose to fix the PCD alignment
     # with global axes, z-up, x-lateral, sensor looking at +y or -y
     # =======================================================================
+    ang_offset: float = np.pi / 6
+    uvw_scale: float = 0.2
+    # the desired pcd tri-axes for placing the pcd in the global coord
+    dst_pcd_axes: FloatArray3x3
+    dst_pcd_axes = np.array([-ut.xaxis, -ut.yaxis, ut.zaxis]).T
+    # dst_pcd_axes = np.array([ut.xaxis, ut.yaxis, ut.zaxis]).T
+
     # instantiate a PointcloundHandler instance
     voi: PointcloudHandler = PointcloudHandler(
         pcd_raw=pcd,
         pcd_idx=[-1] * len(pcd.points),
         vec2sky=vec2sky,
-        vec2sensor=vec2sensor,
+        vec2snr=vec2snr,
         disp_info=disp_info,
         disp_progress=disp_progress,
     )
@@ -145,17 +165,15 @@ if __name__ == "__main__":
         ang_offset=ang_offset,
         max_num_planes=200,
     )
-    ctr = pcd_t.get_center()
-    rotmat = pcd_t.get_rotation_matrix_from_xyz([0, 0, np.pi])
+    ctr: FloatArray3 = pcd_t.get_center()
+    rotmat: FloatArray3x3 = pcd_t.get_rotation_matrix_from_xyz([0, 0, np.pi])
     pcd_t.translate(translation=-ctr, relative=True).rotate(
         R=rotmat, center=(0, 0, 0)
     ).translate(translation=ctr, relative=True)
 
     # test of no-rotation
-    pcd_t = pcd
-    dst_pcd_axes = np.array(
-        [np.cross(vec2sky, vec2sensor), vec2sensor, vec2sky]
-    ).T
+    # pcd_t = pcd
+    # dst_pcd_axes = np.array([np.cross(vec2sky, vec2snr), vec2snr, vec2sky]).T
 
     # =======================================================================
     # STEP 3: define parameters for the segmentation and depth measurements
@@ -163,9 +181,9 @@ if __name__ == "__main__":
     param_patch_det: ParamPlanarPatchDetection
     param_fid_det: ParamFiducialDetection
     param_logend_det: ParamLogendDetection
-    match use_clustering:
+    match which_data:
         # dealing with photogrammetry specific params
-        case "PHTGM_SHOP":
+        case "inshop-phtgm":
             param_patch_det = ParamPlanarPatchDetection(
                 normal_variance_threshold_deg=30,  # 60
                 coplanarity_deg=75,  # 75
@@ -192,7 +210,44 @@ if __name__ == "__main__":
                 grd_hgt_lo=0.12,
             )
 
-        case "PHTGM_SNO":
+        case "snoqualmie-phtgm":
+            if which_end == "frt":
+                param_patch_det = ParamPlanarPatchDetection(
+                    normal_variance_threshold_deg=25,  # 60
+                    coplanarity_deg=60,  # 75
+                    outlier_ratio=0.25,  # 0.75
+                    min_plane_edge_len=0,  # 0
+                    min_num_pts=10,  # 0
+                    search_knn=5,  # 30
+                )
+            else:
+                param_patch_det = ParamPlanarPatchDetection(
+                    normal_variance_threshold_deg=25,  # 60
+                    coplanarity_deg=50,  # 75
+                    outlier_ratio=0.25,  # 0.75
+                    min_plane_edge_len=0,  # 0
+                    min_num_pts=10,  # 0
+                    search_knn=5,  # 30
+                )
+            # setup ref_plane/fiducials detection parameters
+            param_fid_det = ParamFiducialDetection(
+                fid_patch_ang_lo=np.pi / 6,
+                fid_patch_ang_hi=np.pi / 6 * 5,
+                fid_patch_ratio_uv_lo=0.25,
+                fid_patch_ratio_uv_hi=4.0,
+            )
+            # setup log patch detection parameters
+            param_logend_det = ParamLogendDetection(
+                pose_ang_lo=ang_offset,
+                pose_ang_hi=np.pi - ang_offset,
+                diag_uv_lo=0.05,
+                diag_uv_hi=0.75,
+                ratio_uv_lo=0.55,
+                ratio_uv_hi=1.82,
+                grd_hgt_lo=1.7,
+            )
+
+        case "snoqualmie-lidar":
             if which_end == "frt":
                 param_patch_det = ParamPlanarPatchDetection(
                     normal_variance_threshold_deg=25,  # 60
@@ -230,7 +285,7 @@ if __name__ == "__main__":
             )
 
         # dealing with lidar pcd, using Lidar specific params
-        case "PLANE_PATCH_LIDAR":
+        case "inshop-lidar":
             param_patch_det = ParamPlanarPatchDetection(
                 normal_variance_threshold_deg=45,  # 60
                 coplanarity_deg=45,  # 75
@@ -261,8 +316,7 @@ if __name__ == "__main__":
         case _:
             sys.exit(
                 f"[INFO: {ut.currentFuncName()}]: "
-                f"use_clustering definition not supported in "
-                f"opt_clustering({opt_clustering})"
+                f"which_data definition {which_data} not supported."
             )
 
     # =======================================================================
@@ -275,7 +329,7 @@ if __name__ == "__main__":
         pcd_raw=pcd_t,
         pcd_idx=voi.pcd_idx,
         vec2sky=dst_pcd_axes[:, 2],
-        vec2sensor=dst_pcd_axes[:, 1],
+        vec2snr=dst_pcd_axes[:, 1],
         disp_info=disp_info,
         disp_progress=disp_progress,
     )
@@ -301,7 +355,7 @@ if __name__ == "__main__":
     logsec.draw_log_scaling_results(
         vis=vis,
         label_name="log",
-        uvw_scale=uvw_mesh_scale,
+        uvw_scale=uvw_scale,
         uvw_selected=np.array([False, False, True]),
     )
     vis.reset_camera_to_default()

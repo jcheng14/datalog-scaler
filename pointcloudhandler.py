@@ -28,7 +28,7 @@ class PointcloudHandler:
         pcd_raw: PointCloud,
         pcd_idx: list[int],
         vec2sky: FloatArray3 = ut.zaxis,
-        vec2sensor: FloatArray3 = -ut.yaxis,
+        vec2snr: FloatArray3 = -ut.yaxis,
         disp_info: bool = True,
         disp_progress: bool = True,
     ) -> None:
@@ -41,7 +41,7 @@ class PointcloudHandler:
                 but will be setting sensor-, ground- and reference- plane pcd
                 indices during the data processing
             vec2sky(type: np.ndarray) -- pcd's upward vec (default zaxis)
-            vec2sensor(type: np.ndarray) -- pcd to sensor vec (default -yaxis)
+            vec2snr(type: np.ndarray) -- pcd to sensor vec (default -yaxis)
             disp_info(type: bool) -- display debug info (dafault False)
             disp_progress(type: bool) -- display progress info (dafault False)
         """
@@ -66,6 +66,7 @@ class PointcloudHandler:
         self.__grd_pcd_idx_label: int = -2
         self.__snr_pcd_idx_label: int = -3
         self.__ref_pcd_idx_label: int = -4
+        self.__gnr_color : FloatArray3 = ut.CP.GRAY
         self.__grd_plane_color: FloatArray3 = ut.CP.GRAY_DARK
         self.__snr_plane_color: FloatArray3 = ut.CP.CYAN_DARK
         self.__snr_arr_color: FloatArray3 = ut.CP.ORANGE_DARK
@@ -76,7 +77,7 @@ class PointcloudHandler:
         # Sanity check for the input arguments
         ut.sck.is_valid_pcd(pcd_raw, "pcd_raw")
         ut.sck.is_nonzero_vector3(vec2sky, nameof(vec2sky))
-        ut.sck.is_nonzero_vector3(vec2sensor, nameof(vec2sensor))
+        ut.sck.is_nonzero_vector3(vec2snr, nameof(vec2snr))
 
         # constructor parameters
         self.pcd_raw: PointCloud = pcd_raw
@@ -90,12 +91,13 @@ class PointcloudHandler:
             )
             self.pcd_idx = pcd_idx
         self.vec2sky: FloatArray3 = vec2sky
-        self.vec2sensor: FloatArray3 = vec2sensor
+        self.vec2snr: FloatArray3 = vec2snr
 
         # for Photogrammrtry PCD, a scaling factor is needed to scale the
         # pcd to real physical dimensions, this needs to be automated later
         # by picking up and measuring the fiducial(s) with known physical
-        # dimensions -- can set a get_phtgm2real_scale() member func for this
+        # dimensions -- can write a estimate_phtgm2real_scale() member func
+        # for assgining the scaling factor to a member variable 
         # self.phtgm2real_scale: float = phtgm2real_scale
 
         # control info (for debug) and progress (for process) message display
@@ -206,6 +208,12 @@ class PointcloudHandler:
             f"the paint_color array is longer than the pcd array length!"
         )
 
+        np_colors = np.array(self.pcd.colors)
+        if not self.pcd.has_colors():
+            self.pcd.colors = o3d.utility.Vector3dVector(
+                np.tile(self.__gnr_color, (len(self.pcd.points), 1))
+
+            )
         np_colors = np.array(self.pcd.colors)
         if len(paint_colors) == 1:
             np_colors[selected_idx, :] = np.tile(
@@ -779,8 +787,8 @@ class PointcloudHandler:
         # get segments from oboxes
         segments = []
         for jj, this_obox in enumerate(oboxes):
-            # flip the obox along its uu if its ww vector aligns to -vec2sensor
-            obox, _, _ = ut.flip_obox(this_obox, self.vec2sensor)
+            # flip the obox along its uu if its ww vector aligns to -vec2snr
+            obox, _, _ = ut.flip_obox(this_obox, self.vec2snr)
             colors = plt.get_cmap("tab20")(jj)
             obox.color = list(colors[:3])
             idx = obox.get_point_indices_within_bounding_box(self.pcd.points)
@@ -907,8 +915,8 @@ class PointcloudHandler:
             grd_plane_ctr = pcd_ctr - grd_plane_model[0:3] * dist_shift
             grd_plane_model[3] = -np.sum(grd_plane_model[0:3] * grd_plane_ctr)
             uu, vv, ww = (
-                ut.vec_norm2plane(self.vec2sensor, grd_plane_model[0:3]),
-                self.vec2sensor,
+                ut.vec_norm2plane(self.vec2snr, grd_plane_model[0:3]),
+                self.vec2snr,
                 grd_plane_model[0:3],
             )
             pts8 = ut.calc_cuboid_vert8(grd_plane_ctr, uu, vv, ww, lu, lv, lw)
@@ -1128,7 +1136,7 @@ class PointcloudHandler:
             pose_ang_lo(type: float)=np.pi/6 (default)
             pose_ang_hi(type: float)=np.pi/6*5 (default)
                 -- the lower & upper bound of the angle offset between the
-                -- reference plane normal vector and self.vec2sensor,
+                -- reference plane normal vector and self.vec2snr,
                 -- in radian unit
             ratio_uv_lo(type: float)=0.33 (default)
             ratio_uv_hi(type: float)=3.0 (default)
@@ -1158,11 +1166,11 @@ class PointcloudHandler:
         )
         selected_index = np.repeat(False, num_candidates)
         vec2sky_arr = np.tile(self.vec2sky, (num_candidates, 1))
-        vec2sensor_arr = np.tile(self.vec2sensor, (num_candidates, 1))
+        vec2snr_arr = np.tile(self.vec2snr, (num_candidates, 1))
         ang_uu2sky = ut.vector_angle(uu, vec2sky_arr)
         ang_vv2sky = ut.vector_angle(vv, vec2sky_arr)
         ang_ww2sky = ut.vector_angle(ww, vec2sky_arr)
-        ang_ww2sensor = ut.vector_angle(ww, vec2sensor_arr)
+        ang_ww2sensor = ut.vector_angle(ww, vec2snr_arr)
         selected_index = (
             ((ang_ww2sensor < pose_ang_lo) | (ang_ww2sensor > pose_ang_hi))
             & ((ang_ww2sky > np.pi / 4) & (ang_ww2sky < np.pi - np.pi / 4))
@@ -1344,8 +1352,8 @@ class PointcloudHandler:
                 ransac_n=3,
                 num_iterations=100,
             )
-            # make sure the snr_plane_model norm_vec points to -self.vec2sensor
-            ss = np.sign(np.dot(snr_plane_model[0:3], -self.vec2sensor))
+            # make sure the snr_plane_model norm_vec points to -self.vec2snr
+            ss = np.sign(np.dot(snr_plane_model[0:3], -self.vec2snr))
             ss = 1.0 if ss == 0.0 else ss
             snr_plane_model *= np.array([ss, ss, ss, 1])
 
@@ -1380,10 +1388,10 @@ class PointcloudHandler:
             #     .translate(translation=octr, relative=True)
             # )
 
-            # flip the snr_obox if its ww points to self.vec2sensor,  so the
+            # flip the snr_obox if its ww points to self.vec2snr,  so the
             # final sensor plane obox ww points to the log
             snr_plane_obox, rotmat, octr = ut.flip_obox(
-                copy.deepcopy(snr_obox), -self.vec2sensor
+                copy.deepcopy(snr_obox), -self.vec2snr
             )
             snr_plane_obox.color = self.__snr_plane_color
             snr_plane_obox_uvw = (
@@ -1404,13 +1412,13 @@ class PointcloudHandler:
             pcd_aabox = self.pcd.get_axis_aligned_bounding_box()
             pcd_ctr: FloatArray3 = pcd_aabox.get_center()
             [ex, ey, ez] = pcd_aabox.get_extent()
-            tx2sensor: float = np.dot(ut.xaxis, self.vec2sensor)
-            ty2sensor: float = np.dot(ut.yaxis, self.vec2sensor)
-            tz2sensor: float = np.dot(ut.zaxis, self.vec2sensor)
+            tx2sensor: float = np.dot(ut.xaxis, self.vec2snr)
+            ty2sensor: float = np.dot(ut.yaxis, self.vec2snr)
+            tz2sensor: float = np.dot(ut.zaxis, self.vec2snr)
             if (np.abs(tz2sensor) >= np.abs(tx2sensor)) and (
                 np.abs(tz2sensor) >= np.abs(ty2sensor)
             ):
-                ss = np.sign(np.dot(ut.zaxis, -self.vec2sensor))
+                ss = np.sign(np.dot(ut.zaxis, -self.vec2snr))
                 ss = 1.0 if ss == 0.0 else ss
                 snr_plane_model = ut.xyplane * ss
                 snr_plane_ctr = pcd_ctr - snr_plane_model[0:3] * (ez / 2)
@@ -1420,7 +1428,7 @@ class PointcloudHandler:
             elif (np.abs(ty2sensor) >= np.abs(tx2sensor)) and (
                 np.abs(ty2sensor) >= np.abs(tz2sensor)
             ):
-                ss = np.sign(np.dot(ut.yaxis, -self.vec2sensor))
+                ss = np.sign(np.dot(ut.yaxis, -self.vec2snr))
                 ss = 1.0 if ss == 0.0 else ss
                 snr_plane_model = ut.zxplane * ss
                 snr_plane_ctr = pcd_ctr - snr_plane_model[0:3] * (ey / 2)
@@ -1430,7 +1438,7 @@ class PointcloudHandler:
             elif (np.abs(tx2sensor) >= np.abs(ty2sensor)) and (
                 np.abs(tx2sensor) >= np.abs(tz2sensor)
             ):
-                ss = np.sign(np.dot(ut.xaxis, -self.vec2sensor))
+                ss = np.sign(np.dot(ut.xaxis, -self.vec2snr))
                 ss = 1.0 if ss == 0.0 else ss
                 snr_plane_model = ut.yzplane * ss
                 snr_plane_ctr = pcd_ctr - snr_plane_model[0:3] * (ex / 2)
@@ -1440,9 +1448,9 @@ class PointcloudHandler:
             else:
                 snr_plane_model = np.array(
                     [
-                        -self.vec2sensor[0],
-                        -self.vec2sensor[1],
-                        -self.vec2sensor[2],
+                        -self.vec2snr[0],
+                        -self.vec2snr[1],
+                        -self.vec2snr[2],
                         0,
                     ]
                 )
@@ -1491,25 +1499,25 @@ class PointcloudHandler:
 
         # sensor plane parameters
         self.snr_plane_model = snr_plane_model
-        self.snr_plane_segment = snr_pcd
+        # self.snr_plane_segment = snr_pcd
         self.snr_plane_obox = snr_plane_obox
         self.snr_plane_mesh = snr_plane_mesh
-        snr_arr_mesh: TriangleMesh = o3d.geometry.TriangleMesh()
-        for jj, pt in enumerate(snr_pcd.points):
-            snr_arr_mesh = snr_arr_mesh + ut.get_arrow_mesh(
-                origin=pt,
-                vector=pt + snr_plane_obox.R[:, 2],
-                scale=0.1,
-                arrow_color=self.__snr_arr_color,
-                cylinder_radius=0.25,
-                cylinder_height=1.0,
-                cylinder_split=4,
-                cone_radius=0.35,
-                cone_height=0.5,
-                cone_split=1,
-                resolution=20,
-            )
-        self.snr_arr_mesh = snr_arr_mesh
+        # snr_arr_mesh: TriangleMesh = o3d.geometry.TriangleMesh()
+        # for jj, pt in enumerate(snr_pcd.points):
+        #     snr_arr_mesh = snr_arr_mesh + ut.get_arrow_mesh(
+        #         origin=pt,
+        #         vector=pt + snr_plane_obox.R[:, 2],
+        #         scale=0.1,
+        #         arrow_color=self.__snr_arr_color,
+        #         cylinder_radius=0.25,
+        #         cylinder_height=1.0,
+        #         cylinder_split=4,
+        #         cone_radius=0.35,
+        #         cone_height=0.5,
+        #         cone_split=1,
+        #         resolution=20,
+        #     )
+        # self.snr_arr_mesh = snr_arr_mesh
 
         # if self.disp_info:
         #     o3d.visualization.draw(
@@ -1568,7 +1576,7 @@ class PointcloudHandler:
             o3dobjs_name="obox_candidates",
             selected_idx=[True] * len(obox_candidates),
         )
-        ref_vec = self.vec2sensor
+        ref_vec = self.vec2snr
         grd_plane_model = self.grd_plane_model
 
         # Sanity check for the input arguments
@@ -1715,7 +1723,7 @@ class PointcloudHandler:
 
     def draw_log_scaling_results(
         self,
-        vis: o3d.cpu.pybind.visualization.O3DVisualizer,
+        vis: o3d.pybind.visualization.O3DVisualizer,
         label_name: str,
         uvw_scale: float = 1.0,
         uvw_selected: BoolArray3 = np.array([True, True, True]),
@@ -2036,7 +2044,7 @@ class PointcloudHandler:
                 uvw_selected=np.array([True, True, True]),
                 disp_info=self.disp_info,
             )
-        # get the referece plane for the actual vec2sensor, and for
+        # get the referece plane for the actual vec2snr, and for
         # depth measurements and later proper visual
         self.get_ref_plane(
             pose_ang_lo=param_fid_det.fid_patch_ang_lo,
@@ -2046,30 +2054,30 @@ class PointcloudHandler:
         )
         old_ww = self.ref_plane_obox.R[:, 2]
         new_ww = self.ref_plane_obox.R[:, 2]
-        ang_off = ut.vector_angle(new_ww, self.vec2sensor)
+        ang_off = ut.vector_angle(new_ww, self.vec2snr)
         ang2sky = ut.vector_angle(new_ww, self.vec2sky)
         vec_updated = False
         if np.abs(ang2sky - np.pi / 2) <= ang_offset:
             if ang_off <= ang_offset:
-                self.vec2sensor, vec_updated = new_ww, True
+                self.vec2snr, vec_updated = new_ww, True
             elif ang_off >= np.pi - ang_offset:
-                self.vec2sensor, vec_updated = -new_ww, True
+                self.vec2snr, vec_updated = -new_ww, True
         if self.disp_progress and vec_updated:
             print(
                 f"[INFO: {ut.currentFuncName()}]: "
-                f"The pcd's vec2sensor has been updated from "
+                f"The pcd's vec2snr has been updated from "
                 f"[{old_ww[0]:.2e}, {old_ww[1]:.2e}, {old_ww[2]:.2e}] to "
-                f"[{self.vec2sensor[0]:.2e}, {self.vec2sensor[1]:.2e}, "
-                f"{self.vec2sensor[2]:.2e}]"
+                f"[{self.vec2snr[0]:.2e}, {self.vec2snr[1]:.2e}, "
+                f"{self.vec2snr[2]:.2e}]"
             )
 
-        # first shift the pcd such that its reference plane is at vec2sensor's
+        # first shift the pcd such that its reference plane is at vec2snr's
         # origin position, then move to the tvec position as defined
         # this is still a rough implementation. Will improve later.
         # sensor_axis_shift = (
         #     np.dot(
         #         self.ref_plane_obox.center - self.pcd.get_center(),
-        #         -self.vec2sensor,
+        #         -self.vec2snr,
         #     )
         #     + ref_plane_axis_position
         # )
@@ -2111,9 +2119,9 @@ class PointcloudHandler:
         # Sanity check for the input arguments
         ut.sck.is_valid_pcd(self.pcd, "self.pcd")
 
-        # pick the points whose normal vecs align with self.vec2sensor
+        # pick the points whose normal vecs align with self.vec2snr
         aa = np.array(self.pcd.normals)
-        bb = np.tile(self.vec2sensor, (len(aa), 1))
+        bb = np.tile(self.vec2snr, (len(aa), 1))
         dd = ut.vector_angle(aa, bb)
         nv2snr_idx = np.where(
             (dd <= param_logend_det.pose_ang_lo)

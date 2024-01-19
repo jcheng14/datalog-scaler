@@ -16,8 +16,8 @@ from pointcloudhandler import PointcloudHandler
 
 if __name__ == "__main__":
     data_type: list[str] = [
-        "in-house-phtgm-mesh",
-        "in-house-lidar",
+        "testbed-phtgm-mesh",
+        "testbed-lidar",
         "snoqualmie-phtgm",
         "snoqualmie-lidar",
     ]
@@ -56,11 +56,12 @@ if __name__ == "__main__":
         "pcd_color_pick",
         "pcd_idx_label",
         "pcd_normals_pick",
+        "pcd_rotation",
     ]
     which_test: str = test_case[3]
 
     match which_data:
-        case "in-house-phtgm-mesh":
+        case "testbed-phtgm-mesh":
             # Flir camera, multiple captures
             folder_name = "C:\\Users\\SteveYin\\MyCode\\datalog-photogrammetry"
             obj_name = "texturedMesh.obj"
@@ -81,7 +82,7 @@ if __name__ == "__main__":
             pcd_name: str = f"{mrun}_crop.ply"
             vec2sky, vec2sensor = -ut.yaxis, -ut.zaxis
 
-        case "in-house-lidar":
+        case "testbed-lidar":
             pcd_folder = "C:\\Users\\SteveYin\\MyCode\\datalog-mvp-scaler"
             mrun_name = "data_local"
             # obj_name = "lidar_data_apr_12_1frame"
@@ -275,63 +276,6 @@ if __name__ == "__main__":
             app.add_window(vis)
             app.run()
 
-            """
-            # run planar patch detction to segment the log ends
-            oboxes = cl.detect_planar_patches(
-                normal_variance_threshold_deg=25,  # 25
-                coplanarity_deg=60,  # 60
-                outlier_ratio=0.25,  # 0.25
-                min_plane_edge_length=0,
-                min_num_points=10,  # 10
-                search_param=o3d.geometry.KDTreeSearchParamKNN(knn=5),  # 10
-            )
-            ut.draw_planar_patches(
-                oboxes=oboxes,
-                o3dobj=cl,
-                uvw_scale=0.2,
-                uvw_selected=np.array([True, True, True]),
-                disp_info=True,
-            )
-            # get segments from oboxes
-            valid_idx = [False] * len(oboxes)
-            np_colors = np.array(voi.pcd.colors)
-            for jj, this_obox in enumerate(oboxes):
-                ctr = this_obox.center
-                eu, ev, ew = (
-                    this_obox.extent[0],
-                    this_obox.extent[1],
-                    this_obox.extent[2],
-                )
-                aspect_ratio = np.max([eu / ev, ev / eu])
-                if aspect_ratio < 2 and aspect_ratio > 0.5:
-                    valid_idx[jj] = True
-                    # flip obox if its ww vector aligns to -vec2sensor
-                    obox, _, _ = ut.flip_obox(this_obox, vec2sensor)
-                    colors = plt.get_cmap("tab20")(jj)
-                    obox.color = list(colors[:3])
-                    idx = obox.get_point_indices_within_bounding_box(
-                        voi.pcd.points
-                    )
-                    np_colors[idx, :] = list(colors[:3])
-            voi.pcd.colors = o3d.utility.Vector3dVector(np_colors)
-
-            oboxes_valid = np.array(oboxes)[valid_idx].tolist()
-            ut.draw_planar_patches(
-                oboxes=oboxes_valid,
-                o3dobj=voi.pcd,
-                uvw_scale=0.2,
-                uvw_selected=np.array([True, True, True]),
-                disp_info=True,
-            )
-            o3d.visualization.draw(
-                [
-                    {"name": "pcd", "geometry": voi.pcd},
-                ],
-                show_ui=True,
-                # point_size=5,
-            )
-            """
-
         case "pcd_handler":
             # get snr_plane
             voi.get_snr_plane()
@@ -438,3 +382,6 @@ if __name__ == "__main__":
                 show_ui=True,
                 # point_size=5,
             )
+
+        case _:
+            sys.exit("case not handled ...")
